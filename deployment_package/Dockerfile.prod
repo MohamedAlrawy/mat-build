@@ -1,9 +1,10 @@
 # =============================================================================
 # SECURE PRODUCTION DOCKERFILE - Uses Pre-compiled Code
 # This Dockerfile uses pre-compiled .pyc files for maximum security
+# Python 3.12 to match host compilation version
 # =============================================================================
 
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Security: Run as non-root user
 RUN groupadd -r maternal && useradd -r -g maternal maternal
