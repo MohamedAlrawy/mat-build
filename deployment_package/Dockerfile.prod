@@ -1,0 +1,84 @@
+# =============================================================================
+# SECURE PRODUCTION DOCKERFILE - Uses Pre-compiled Code
+# This Dockerfile uses pre-compiled .pyc files for maximum security
+# =============================================================================
+
+FROM python:3.11-slim
+
+# Security: Run as non-root user
+RUN groupadd -r maternal && useradd -r -g maternal maternal
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONOPTIMIZE=2 \
+    DEBIAN_FRONTEND=noninteractive \
+    PATH="/home/maternal/.local/bin:$PATH"
+
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    libpq5 \
+    netcat-openbsd \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install Python dependencies
+COPY app/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip
+
+# Copy PRE-COMPILED application code (from build_secure output)
+# This includes only .pyc files, no source code
+COPY app/ /app/
+
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
+    chown -R maternal:maternal /app
+
+# Copy and set up entrypoint
+COPY scripts/entrypoint.prod.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh && \
+    chown maternal:maternal /app/entrypoint.sh
+
+# Security: Remove unnecessary packages and clear cache
+RUN apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Switch to non-root user
+USER maternal
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8003/api/health/ || exit 1
+
+# Expose port
+EXPOSE 8003
+
+# Security labels
+LABEL security.level="production" \
+      security.compiled="true" \
+      security.precompiled="true" \
+      security.user="non-root" \
+      maintainer="maternal-health-team" \
+      description="Maternal Backend with pre-compiled Python bytecode"
+
+# Run entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["gunicorn", "maternal_backend.wsgi:application", \
+     "--bind", "0.0.0.0:8003", \
+     "--workers", "4", \
+     "--worker-class", "sync", \
+     "--worker-tmp-dir", "/dev/shm", \
+     "--timeout", "120", \
+     "--graceful-timeout", "30", \
+     "--max-requests", "1000", \
+     "--max-requests-jitter", "50", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info"]
+

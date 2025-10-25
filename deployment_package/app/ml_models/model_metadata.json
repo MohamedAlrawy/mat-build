@@ -1,0 +1,29 @@
+{
+  "feature_names": [
+    "gravidity",
+    "parity",
+    "gestational_age",
+    "diabetes",
+    "multiple_cs",
+    "grand_multipara",
+    "placenta_abruption",
+    "placenta_previa",
+    "multiple_gestation",
+    "preeclampsia",
+    "severe_anemia",
+    "ivf_pregnancy",
+    "polyhydramios",
+    "non_cephalic",
+    "iugr",
+    "preterm",
+    "fetal_weight",
+    "cs_delivery",
+    "emergency_cs",
+    "hb",
+    "platelets"
+  ],
+  "label_encoder_dict": {},
+  "trained_date": "2025-10-19T18:45:53.915825",
+  "training_samples": 4611,
+  "test_samples": 1153
+}
