@@ -113,7 +113,8 @@ services:
       - ./nginx_cache:/var/cache/nginx
       - nginx_logs:/var/log/nginx
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     networks:
       - maternal_network
     security_opt:
