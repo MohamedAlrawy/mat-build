@@ -61,7 +61,7 @@ services:
       - media_volume:/app/media
       - logs_volume:/app/logs
     ports:
-      - "127.0.0.1:8003:8003"  # Bind to localhost only
+      - "8003:8003"  # Bind to localhost only
     env_file:
       - .env
     environment:
@@ -98,45 +98,20 @@ services:
         max-file: "3"
 
   # Nginx - Reverse Proxy with SSL
-  nginx:
-    image: nginx:alpine
-    container_name: maternal_nginx_prod
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+      - "81:81"
     volumes:
-      - static_volume:/app/staticfiles:ro
-      - media_volume:/app/media:ro
-      - ./config/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-      - ./nginx_cache:/var/cache/nginx
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      web:
-        condition: service_healthy
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
     networks:
       - maternal_network
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    depends_on:
+      - web
 
   # Redis - Caching and Session Store
   redis:
@@ -177,7 +152,9 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  nginx_logs:
+  npm_letsencrypt:
+    driver: local
+  npm_data:
     driver: local
 
 networks:
